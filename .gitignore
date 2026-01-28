@@ -11,5 +11,6 @@ checkpoints*
 .DS_Store
 logs
 cluster_checkpoints
-figures
+/figures
 .cursor
+thesis_figures
