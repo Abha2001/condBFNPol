@@ -325,16 +325,38 @@ def run_ablation(
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
     
-    results = {
-        'bfn': defaultdict(dict),
-        'diffusion': defaultdict(dict),
-        'metadata': {
-            'timestamp': datetime.now().isoformat(),
-            'bfn_steps': bfn_steps,
-            'diffusion_steps': diffusion_steps,
-            'n_envs': n_envs,
+    results_file = Path(output_dir) / "ablation_results.json"
+
+    if results_file.exists():
+        with open(results_file, "r") as f:
+            loaded = json.load(f)
+
+        results = {
+            'bfn': defaultdict(dict, {
+                int(seed): {int(k): v for k, v in steps.items()}
+                for seed, steps in loaded.get('bfn', {}).items()
+            }),
+            'diffusion': defaultdict(dict, {
+                int(seed): {int(k): v for k, v in steps.items()}
+                for seed, steps in loaded.get('diffusion', {}).items()
+            }),
+            'metadata': loaded.get('metadata', {}),
         }
-    }
+    else:
+        results = {
+            'bfn': defaultdict(dict),
+            'diffusion': defaultdict(dict),
+            'metadata': {},
+        }
+
+    # Always refresh metadata (safe + correct)
+    results['metadata'].update({
+        'timestamp': datetime.now().isoformat(),
+        'bfn_steps': bfn_steps,
+        'diffusion_steps': diffusion_steps,
+        'n_envs': n_envs,
+    })
+
     
     # Run BFN ablation
     print("\n" + "=" * 60)
