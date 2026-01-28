@@ -1,18 +1,18 @@
 # =============================================================================
-# Training configuration for BFN Policy with HYBRID action space
-# Task: Lift (RoboMimic) - 7D arm + discrete gripper
+# Training configuration for Diffusion Policy (baseline) on Lift task
+# Task: Lift (RoboMimic) - 7D continuous action (including gripper)
 # 
-# This config tests BFN's native discrete action handling via Dirichlet-Categorical
-# conjugacy, which should outperform Diffusion Policy's continuous relaxation.
+# This is the BASELINE for comparison with BFN-Policy's native discrete handling.
+# Diffusion treats the binary gripper as a continuous value and uses thresholding.
 # =============================================================================
 
 # Workspace target
-_target_: workspaces.train_bfn_robomimic_workspace.TrainBFNRobomimicWorkspace
+_target_: workspaces.train_diffusion_robomimic_workspace.TrainDiffusionRobomimicWorkspace
 
 # Experiment info
-name: train_bfn_hybrid
+name: train_diffusion_hybrid
 task_name: lift_image
-exp_name: discrete_test
+exp_name: discrete_baseline
 
 # Shape meta (from lift_image dataset - 7D action)
 shape_meta:
@@ -30,7 +30,7 @@ shape_meta:
     robot0_gripper_qpos:
       shape: [2]
   action:
-    shape: [7]  # 6D delta pose + 1D gripper
+    shape: [7]  # 6D delta pose + 1D gripper (continuous relaxation)
 
 # ================== Horizons ==================
 horizon: 16
@@ -42,30 +42,34 @@ past_action_visible: false
 keypoint_visible_rate: 1.0
 obs_as_global_cond: true
 
-# ================== Policy with HYBRID action handling ==================
+# ================== Policy ==================
 policy:
-  _target_: policies.bfn_hybrid_action_policy.BFNHybridActionPolicy
+  _target_: policies.diffusion_unet_hybrid_image_policy.DiffusionUnetHybridImagePolicy
   shape_meta: ${shape_meta}
+  
+  # Noise scheduler (DDPM)
+  noise_scheduler:
+    _target_: diffusers.schedulers.scheduling_ddpm.DDPMScheduler
+    num_train_timesteps: 100
+    beta_start: 0.0001
+    beta_end: 0.02
+    beta_schedule: squaredcos_cap_v2
+    variance_type: fixed_small
+    clip_sample: true
+    prediction_type: epsilon
+  
   horizon: ${horizon}
-  n_obs_steps: ${n_obs_steps}
   n_action_steps: 8
+  n_obs_steps: ${n_obs_steps}
+  num_inference_steps: 100
+  obs_as_global_cond: ${obs_as_global_cond}
   
-  # HYBRID ACTION CONFIG - Key difference from baseline
-  # Lift task has 7D action: 6D delta pose + 1D gripper (index 6)
-  discrete_action_indices: [6]  # Gripper is the 7th dimension (0-indexed: 6)
-  discrete_action_classes: [2]   # Binary: open (-1) or closed (+1)
-  
-  # BFN-specific config
-  sigma_1: 0.001      # Continuous noise schedule
-  beta_1: 0.2         # Discrete accuracy schedule
-  n_timesteps: 20
-  
-  # Vision encoder config (SAME as Diffusion)
+  # Vision encoder config (SAME as BFN)
   crop_shape: [76, 76]
   obs_encoder_group_norm: true
   eval_fixed_crop: true
   
-  # U-Net config (SAME as Diffusion)
+  # U-Net config (SAME as BFN)
   diffusion_step_embed_dim: 128
   down_dims: [512, 1024, 2048]
   kernel_size: 5
@@ -89,8 +93,7 @@ task:
     seed: 42
     val_ratio: 0.02
   
-  # env_runner disabled - requires mujoco_py for evaluation
-  # Training will work without it, just no rollout evaluation
+  # env_runner disabled - requires mujoco_py
   env_runner: null
 
 # ================== EMA ==================
@@ -145,15 +148,13 @@ val_dataloader:
   persistent_workers: false
 
 # ================== Checkpoint ==================
-# THESIS CONFIG: Minimal checkpointing to avoid disk quota issues
-# Only keep 1 best checkpoint, no last checkpoint
 checkpoint:
   topk:
     monitor_key: train_loss
     mode: min
-    k: 1  # Only keep best checkpoint to save disk space
+    k: 1
     format_str: epoch={epoch:04d}-train_loss={train_loss:.4f}.ckpt
-  save_last_ckpt: false  # Don't save last - saves ~4GB per run
+  save_last_ckpt: false
   save_last_snapshot: false
 
 # ================== Logging ==================
@@ -166,9 +167,8 @@ logging:
     - ${name}
     - ${task_name}
     - ${exp_name}
-    - bfn
-    - hybrid
-    - discrete
+    - diffusion
+    - baseline
   id: null
   group: null
 
@@ -186,3 +186,4 @@ hydra:
   sweep:
     dir: outputs/${now:%Y.%m.%d}/${now:%H.%M.%S}_${name}_${task_name}_hybrid
     subdir: ${hydra.job.num}
+

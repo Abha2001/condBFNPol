@@ -456,9 +456,14 @@ class BFNHybridActionPolicy(BasePolicy):
         # Unnormalize continuous actions (discrete stay as indices)
         action_unnorm = self.normalizer['action'].unnormalize(action)
         
-        # For discrete dims, convert to binary (threshold at 0.5)
+        # For discrete dims, convert to binary [-1, +1] (threshold at 0)
         for idx in sorted(self.discrete_action_indices):
-            action_unnorm[:, :, idx] = (action_unnorm[:, :, idx] > 0.5).float()
+            # Map to [-1, +1]: values > 0 -> +1, values <= 0 -> -1
+            action_unnorm[:, :, idx] = torch.where(
+                action_unnorm[:, :, idx] > 0, 
+                torch.ones_like(action_unnorm[:, :, idx]),
+                -torch.ones_like(action_unnorm[:, :, idx])
+            )
         
         return {
             'action': action_unnorm,
@@ -592,10 +597,11 @@ class BFNHybridActionPolicy(BasePolicy):
         offset = cont_dim
         for j, (_, n_classes) in enumerate(disc_configs):
             logits = out_final[:, :, offset:offset + n_classes]
-            # For binary gripper: class 0 = 0.0, class 1 = 1.0
+            # For binary gripper: class 0 = -1.0 (closed), class 1 = +1.0 (open)
             class_idx = logits.argmax(dim=-1)  # [B, T]
-            # Normalize to [0, 1] range for gripper (or appropriate range)
-            disc_value = class_idx.float() / (n_classes - 1)
+            # Map to [-1, +1] range to match ground truth encoding
+            # class 0 -> -1, class 1 -> +1
+            disc_value = class_idx.float() * 2.0 - 1.0
             disc_values.append(disc_value.unsqueeze(-1))
             offset += n_classes
         
