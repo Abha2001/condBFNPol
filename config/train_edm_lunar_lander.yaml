@@ -1,0 +1,167 @@
+# =============================================================================
+# Training configuration for EDM Teacher Policy
+# Task: Lunar Lander - Continuous encoding (one-hot discrete + continuous params)
+#
+# EDM (Elucidating Diffusion Models) serves as the teacher for
+# Consistency Policy distillation. Uses Karras noise schedule
+# and Heun's 2nd-order ODE solver.
+# =============================================================================
+
+# Workspace target
+_target_: workspaces.train_bfn_workspace.TrainBFNWorkspace
+
+# Experiment info
+name: train_edm_lunar_lander
+task_name: lunar_lander
+exp_name: edm_teacher
+
+# Shape meta
+shape_meta:
+  obs:
+    state:
+      shape: [8]
+      type: low_dim
+  action:
+    shape: [6]  # 4 one-hot + 2 continuous
+
+# ================== Horizons ==================
+horizon: 16
+n_obs_steps: 2
+n_action_steps: 8
+n_latency_steps: 0
+dataset_obs_steps: 2
+past_action_visible: false
+obs_as_global_cond: true
+
+# ================== Policy ==================
+policy:
+  _target_: policies.edm_lowdim_policy.EDMLowdimPolicy
+  obs_dim: 8
+  action_dim: 6  # 4 one-hot discrete + 2 continuous
+  horizon: ${horizon}
+  n_obs_steps: ${n_obs_steps}
+  n_action_steps: ${n_action_steps}
+
+  # EDM scheduler config
+  sigma_min: 0.002
+  sigma_max: 80.0
+  rho: 7.0
+  num_inference_steps: 40  # High quality for teacher
+  solver: heun  # 2nd order ODE solver
+  P_mean: -1.2  # Log-normal sampling parameters
+  P_std: 1.2
+
+  # Loss config
+  delta: -1.0  # Auto-compute Huber delta
+
+  # Network config
+  obs_encoder_dims: [256, 256]
+  diffusion_step_embed_dim: 128
+  down_dims: [256, 512, 1024]
+  kernel_size: 5
+  n_groups: 8
+  cond_predict_scale: true
+
+# ================== Task (Dataset) ==================
+task:
+  dataset:
+    _target_: dataset.lunar_lander_dataset.LunarLanderContinuousDataset
+    zarr_path: data/lunar_lander/replay_buffer.zarr
+    horizon: ${horizon}
+    pad_before: 1
+    pad_after: 7
+    seed: 42
+    val_ratio: 0.02
+
+  env_runner: null
+
+# ================== EMA ==================
+ema:
+  _target_: diffusion_policy.model.diffusion.ema_model.EMAModel
+  update_after_step: 0
+  inv_gamma: 1.0
+  power: 0.75
+  min_value: 0.0
+  max_value: 0.9999
+
+# ================== Optimizer ==================
+optimizer:
+  _target_: torch.optim.AdamW
+  lr: 1.0e-4
+  betas: [0.95, 0.999]
+  eps: 1.0e-8
+  weight_decay: 1.0e-6
+
+# ================== Training ==================
+training:
+  device: cuda:0
+  seed: 42
+  debug: false
+  resume: false
+  lr_scheduler: cosine
+  lr_warmup_steps: 500
+  num_epochs: 200
+  gradient_accumulate_every: 1
+  use_ema: true
+  rollout_every: 50
+  checkpoint_every: 50
+  val_every: 1
+  sample_every: 5
+  max_train_steps: null
+  max_val_steps: null
+  tqdm_interval_sec: 1.0
+
+# ================== Dataloader ==================
+dataloader:
+  batch_size: 128
+  num_workers: 4
+  shuffle: true
+  pin_memory: true
+  persistent_workers: false
+
+val_dataloader:
+  batch_size: 128
+  num_workers: 4
+  shuffle: false
+  pin_memory: true
+  persistent_workers: false
+
+# ================== Checkpoint ==================
+checkpoint:
+  topk:
+    monitor_key: train_loss
+    mode: min
+    k: 3
+    format_str: epoch={epoch:04d}-train_loss={train_loss:.4f}.ckpt
+  save_last_ckpt: true
+  save_last_snapshot: false
+
+# ================== Logging ==================
+logging:
+  project: edm_lunar_lander
+  resume: true
+  mode: offline
+  name: ${now:%Y.%m.%d-%H.%M.%S}_${name}_${task_name}
+  tags:
+    - ${name}
+    - ${task_name}
+    - ${exp_name}
+    - edm
+    - teacher
+  id: null
+  group: null
+
+# ================== Multi-run ==================
+multi_run:
+  run_dir: data/outputs/${now:%Y.%m.%d}/${now:%H.%M.%S}_${name}_${task_name}
+  wandb_name_base: ${now:%Y.%m.%d-%H.%M.%S}_${name}_${task_name}
+
+# ================== Hydra ==================
+hydra:
+  job:
+    override_dirname: ${name}
+  run:
+    dir: outputs/${now:%Y.%m.%d}/${now:%H.%M.%S}_${name}_${task_name}
+  sweep:
+    dir: outputs/${now:%Y.%m.%d}/${now:%H.%M.%S}_${name}_${task_name}
+    subdir: ${hydra.job.num}
