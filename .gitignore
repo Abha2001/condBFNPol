@@ -14,3 +14,6 @@ cluster_checkpoints
 figures
 .cursor
 src
+_external/
+pusht_raw/
+jobs/logs/
