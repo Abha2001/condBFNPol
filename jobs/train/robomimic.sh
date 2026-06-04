@@ -19,7 +19,7 @@
 set -e  # Exit on error
 
 # Configuration
-PROJECT_DIR="/dss/dsshome1/0D/ge87gob2/condBFNPol"
+PROJECT_DIR="$PROJECT_ROOT"
 TASK="${TASK:-lift}"           # Default task: lift (can override with --export=TASK=can)
 METHOD="${METHOD:-bfn}"        # Default method: bfn (can override with --export=METHOD=diffusion)
 SEED="${SEED:-42}"             # Default seed
@@ -38,7 +38,7 @@ echo ""
 # Check disk usage before starting
 echo "=== Disk Usage Check ==="
 du -sh $PROJECT_DIR 2>/dev/null || echo "Could not check disk usage"
-df -h /dss/dsshome1 | tail -1
+df -h $PROJECT_ROOT | tail -1
 echo ""
 
 # Change to project directory

@@ -8,15 +8,15 @@
 #SBATCH --mem=32G
 #SBATCH --time=6:00:00
 #SBATCH --job-name=edm_fixed
-#SBATCH --output=/project2/biyik_1165/abhajha/condBFNPol/jobs/logs/%x_%j.out
-#SBATCH --error=/project2/biyik_1165/abhajha/condBFNPol/jobs/logs/%x_%j.err
+#SBATCH --output=$PROJECT_ROOT/jobs/logs/%x_%j.out
+#SBATCH --error=$PROJECT_ROOT/jobs/logs/%x_%j.err
 
 # Retrain EDM with fixed loss function
 
 source /apps/conda/miniforge3/24.11.3/etc/profile.d/conda.sh
 conda activate bfn
 
-cd /project2/biyik_1165/abhajha/condBFNPol
+cd $PROJECT_ROOT
 
 echo "=========================================="
 echo "SLURM_JOB_ID = $SLURM_JOB_ID"

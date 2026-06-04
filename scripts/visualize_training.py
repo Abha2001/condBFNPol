@@ -47,8 +47,8 @@ def smooth(y, window=10):
     return smoothed
 
 def main():
-    outputs_dir = Path('/dss/dsshome1/0D/ge87gob2/condBFNPol/outputs')
-    results_dir = Path('/dss/dsshome1/0D/ge87gob2/condBFNPol/results')
+    outputs_dir = Path('$PROJECT_ROOT/outputs')
+    results_dir = Path('$PROJECT_ROOT/results')
     results_dir.mkdir(exist_ok=True)
     
     # Load all logs

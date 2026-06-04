@@ -14,7 +14,7 @@ import hydra
 from omegaconf import OmegaConf
 
 # Add project root to path
-sys.path.insert(0, '/dss/dsshome1/0D/ge87gob2/condBFNPol')
+sys.path.insert(0, '$PROJECT_ROOT')
 
 # Register eval resolver for hydra configs
 OmegaConf.register_new_resolver("eval", eval, replace=True)
@@ -326,7 +326,7 @@ def visualize_overlay(bfn_results, diff_results, output_path):
 
 
 def main():
-    output_dir = '/dss/dsshome1/0D/ge87gob2/condBFNPol/thesis_figures'
+    output_dir = '$PROJECT_ROOT/thesis_figures'
     os.makedirs(output_dir, exist_ok=True)
     
     print("=" * 50)
@@ -334,7 +334,7 @@ def main():
     print("=" * 50)
     
     # Find checkpoints
-    outputs_dir = '/dss/dsshome1/0D/ge87gob2/condBFNPol/outputs'
+    outputs_dir = '$PROJECT_ROOT/outputs'
     
     bfn_ckpt = None
     diff_ckpt = None
@@ -423,7 +423,7 @@ def main():
     
     # Copy to figures_for_professor
     import shutil
-    dest_dir = '/dss/dsshome1/0D/ge87gob2/condBFNPol/figures_for_professor'
+    dest_dir = '$PROJECT_ROOT/figures_for_professor'
     for f in ['pred_bfn.png', 'pred_diffusion.png', 'pred_error_comparison.png', 'pred_overlay.png']:
         src = os.path.join(output_dir, f)
         if os.path.exists(src):

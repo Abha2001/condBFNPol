@@ -1,5 +1,5 @@
 """
-Collect demonstration data from trained PPO expert on Extended Lunar Lander.
+Collect demonstration data from trained SAC expert on Extended Lunar Lander.
 
 Saves data in zarr format compatible with BFN/DDPM training.
 """
@@ -7,7 +7,6 @@ Saves data in zarr format compatible with BFN/DDPM training.
 import os
 import sys
 import argparse
-import json
 from pathlib import Path
 from datetime import datetime
 
@@ -24,27 +23,63 @@ from environments.lunar_lander_extended import (
     NUM_DISCRETE,
     MAX_PARAM_DIM,
 )
-from scripts.train_rl_extended import HybridActorCritic
+from scripts.train_hybrid_sac_extended import Policy, HybridActionLayout
+
+# Optional video saving
+try:
+    import imageio
+    HAS_IMAGEIO = True
+except ImportError:
+    HAS_IMAGEIO = False
 
 
 def load_expert(checkpoint_path: str, device: str = "cuda"):
-    """Load trained PPO expert."""
-    checkpoint = torch.load(checkpoint_path, map_location=device)
+    """Load trained SAC expert."""
+    checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)
 
-    # Create policy
+    # Get action layout from checkpoint or create from env
+    if 'action_layout' in checkpoint:
+        al_dict = checkpoint['action_layout']
+        # Convert dict to HybridActionLayout dataclass
+        action_layout = HybridActionLayout(
+            num_discrete=al_dict['num_discrete'],
+            param_dims=al_dict['param_dims'],
+            branch_slices=al_dict['branch_slices'],
+            total_param_dim=al_dict['total_param_dim'],
+            max_param_dim=al_dict['max_param_dim'],
+            action_names=al_dict['action_names'],
+        )
+    else:
+        env = ExtendedHybridLunarLander(use_image_obs=False)
+        action_spec = env.get_action_spec()
+        action_layout = HybridActionLayout.from_env_spec(action_spec)
+        env.close()
+
+    # Create policy with same architecture as training
     obs_dim = 8  # Lunar Lander state dim
-    policy = HybridActorCritic(obs_dim, NUM_DISCRETE, MAX_PARAM_DIM).to(device)
-    policy.load_state_dict(checkpoint['policy_state_dict'])
+    policy = Policy(
+        obs_dim=obs_dim,
+        action_layout=action_layout,
+        hidden_dims=[256, 256],
+        activation="relu",
+        weights_init="orthogonal",
+        bias_init="zeros",
+        log_std_min=-5.0,
+        log_std_max=2.0,
+    ).to(device)
+
+    # Load weights - checkpoint uses 'policy' key
+    policy.load_state_dict(checkpoint['policy'])
     policy.eval()
 
-    print(f"Loaded expert from: {checkpoint_path}")
-    print(f"  Best reward: {checkpoint.get('best_reward', 'N/A')}")
-    print(f"  Timestep: {checkpoint.get('timestep', 'N/A')}")
+    print(f"Loaded SAC expert from: {checkpoint_path}")
+    if 'best_eval_reward' in checkpoint:
+        print(f"  Best eval reward: {checkpoint['best_eval_reward']:.1f}")
 
-    return policy
+    return policy, action_layout
 
 
-def collect_episode(env, policy, device: str = "cuda"):
+def collect_episode(env, policy, action_layout, device: str = "cuda", render: bool = False):
     """Collect a single episode."""
     obs, _ = env.reset()
 
@@ -52,18 +87,35 @@ def collect_episode(env, policy, device: str = "cuda"):
     discrete_actions = []
     continuous_actions = []
     rewards = []
+    frames = [] if render else None
 
     done = False
     total_reward = 0
 
     while not done:
+        if render:
+            frame = env.render()
+            if frame is not None:
+                frames.append(frame)
+
         obs_tensor = torch.tensor(obs, dtype=torch.float32, device=device).unsqueeze(0)
 
         with torch.no_grad():
-            discrete_action, continuous_action, _, _, _ = policy.get_action(obs_tensor, deterministic=True)
+            # Get action from policy
+            out = policy.forward(obs_tensor)
+            h = out["h"]
+            logits_d = out["logits_d"]
 
-        d_act = discrete_action.item()
-        c_act = continuous_action.squeeze(0).cpu().numpy()
+            # Sample discrete action (deterministic = argmax)
+            d_act = logits_d.argmax(dim=-1).item()
+
+            # Get continuous parameters for chosen action
+            dim = action_layout.param_dims[d_act]
+            if dim > 0:
+                mean = torch.tanh(policy.branch_means[d_act](h))
+                c_act = mean.squeeze(0).cpu().numpy()
+            else:
+                c_act = np.array([0.0])  # Placeholder for COAST
 
         # Store action
         discrete_actions.append(d_act)
@@ -80,7 +132,7 @@ def collect_episode(env, policy, device: str = "cuda"):
 
     success = terminated and total_reward > 0
 
-    return {
+    result = {
         'observations': np.array(observations[:-1]),  # Exclude final obs
         'discrete_actions': np.array(discrete_actions),
         'continuous_actions': np.array(continuous_actions),
@@ -89,6 +141,24 @@ def collect_episode(env, policy, device: str = "cuda"):
         'success': success,
         'length': len(rewards),
     }
+
+    if render and frames:
+        result['frames'] = frames
+
+    return result
+
+
+def save_video(frames, path, fps=30):
+    """Save frames as video."""
+    if not HAS_IMAGEIO:
+        print("Warning: imageio not available, skipping video save")
+        return
+
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    imageio.mimsave(str(path), frames, fps=fps)
+    print(f"  Saved video: {path}")
 
 
 def create_zarr_dataset(episodes, output_path: str):
@@ -171,9 +241,11 @@ def create_zarr_dataset(episodes, output_path: str):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--checkpoint', type=str, required=True, help='Path to PPO checkpoint')
-    parser.add_argument('--num_episodes', type=int, default=1000)
+    parser.add_argument('--checkpoint', type=str, required=True, help='Path to SAC checkpoint')
+    parser.add_argument('--num_episodes', type=int, default=500)
     parser.add_argument('--output', type=str, default='data/lunar_lander_extended/replay.zarr')
+    parser.add_argument('--video_dir', type=str, default='outputs/demo_videos')
+    parser.add_argument('--video_every', type=int, default=50, help='Save video every N episodes')
     parser.add_argument('--device', type=str, default='cuda')
     parser.add_argument('--seed', type=int, default=42)
     parser.add_argument('--min_reward', type=float, default=0, help='Filter episodes below this reward')
@@ -187,9 +259,9 @@ def main():
     print(f"Using device: {device}")
 
     # Load expert
-    policy = load_expert(args.checkpoint, device)
+    policy, action_layout = load_expert(args.checkpoint, device)
 
-    # Create environment
+    # Create environment (render_mode is set internally to rgb_array)
     env = ExtendedHybridLunarLander(use_image_obs=False)
 
     # Collect episodes
@@ -197,17 +269,28 @@ def main():
     episodes = []
     rewards = []
     successes = []
+    video_count = 0
 
     pbar = tqdm(total=args.num_episodes, desc="Collecting")
 
     while len(episodes) < args.num_episodes:
-        episode = collect_episode(env, policy, device)
+        # Render video periodically
+        render = (len(episodes) % args.video_every == 0) and HAS_IMAGEIO
+
+        episode = collect_episode(env, policy, action_layout, device, render=render)
 
         # Filter by minimum reward if specified
         if episode['total_reward'] >= args.min_reward:
             episodes.append(episode)
             rewards.append(episode['total_reward'])
             successes.append(episode['success'])
+
+            # Save video if rendered
+            if render and 'frames' in episode and episode['frames']:
+                video_path = Path(args.video_dir) / f"demo_ep{len(episodes):04d}_r{episode['total_reward']:.0f}.mp4"
+                save_video(episode['frames'], video_path)
+                video_count += 1
+
             pbar.update(1)
 
             if len(episodes) % 100 == 0:
@@ -222,6 +305,7 @@ def main():
     print(f"  Episodes: {len(episodes)}")
     print(f"  Mean reward: {np.mean(rewards):.1f} ± {np.std(rewards):.1f}")
     print(f"  Success rate: {100*np.mean(successes):.1f}%")
+    print(f"  Videos saved: {video_count}")
 
     # Create zarr dataset
     create_zarr_dataset(episodes, args.output)

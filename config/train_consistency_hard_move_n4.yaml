@@ -52,7 +52,7 @@ policy:
   n_groups: 8
   cond_predict_scale: true
 
-  initial_ema_decay: 0.9
+  initial_ema_decay: 0.999
 
 task:
   dataset:

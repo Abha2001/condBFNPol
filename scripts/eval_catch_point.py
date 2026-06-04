@@ -22,6 +22,11 @@ try:
     HAS_CONSISTENCY = True
 except ImportError:
     HAS_CONSISTENCY = False
+try:
+    from policies.edm_lowdim_policy import EDMLowdimPolicy
+    HAS_EDM = True
+except ImportError:
+    HAS_EDM = False
 
 print("Loading environment...", flush=True)
 from environments.catch_point import CatchPointEnv
@@ -50,6 +55,14 @@ def load_policy(checkpoint_path: str, policy_type: str, device: str = "cuda"):
             obs_dim=6, horizon=16, n_obs_steps=2, n_action_steps=8,
             num_discrete_actions=NUM_DISCRETE, continuous_param_dim=1,
             sigma_1=0.001, beta_1=0.2, n_timesteps=10,
+        )
+    elif policy_type == "edm":
+        policy = EDMLowdimPolicy(
+            obs_dim=6, action_dim=ACTION_DIM_CONT, horizon=16,
+            n_obs_steps=2, n_action_steps=8,
+            sigma_min=0.002, sigma_max=80.0, rho=7.0,
+            num_inference_steps=40, solver="heun",
+            P_mean=-1.2, P_std=1.2, delta=-1.0,
         )
     elif policy_type == "ddim":
         policy = DiffusionLowdimPolicy(
@@ -163,6 +176,7 @@ def main():
     parser.add_argument("--bfn10_ckpt", type=str, default=None)
     parser.add_argument("--ddpm_ckpt", type=str, default=None)
     parser.add_argument("--ddim_ckpt", type=str, default=None)
+    parser.add_argument("--edm_ckpt", type=str, default=None)
     parser.add_argument("--consistency_ckpt", type=str, default=None)
     parser.add_argument("--consistency3_ckpt", type=str, default=None)
     parser.add_argument("--n_episodes", type=int, default=50)
@@ -175,6 +189,7 @@ def main():
         ("bfn10", args.bfn10_ckpt, "BFN-10 (10 steps)"),
         ("ddpm", args.ddpm_ckpt, "DDPM (100 steps)"),
         ("ddim", args.ddim_ckpt, "DDIM (10 steps)"),
+        ("edm", args.edm_ckpt, "EDM (40 steps)"),
         ("consistency", args.consistency_ckpt, "Consistency (1 step)"),
         ("consistency3", args.consistency3_ckpt, "Consistency-3"),
     ]

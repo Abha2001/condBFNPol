@@ -23,7 +23,7 @@ obs_as_global_cond: true
 # Your collected data resolution (C,H,W)
 image_shape: [3, 480, 640]
 crop_shape: [384, 512]
-dataset_path: /scr2/zhaoyang/BFN_data/pusht_real
+dataset_path: $PROJECT_ROOT/data/pusht_real
 
 shape_meta:
   action:
@@ -194,7 +194,7 @@ logging:
 # ================== Hydra ==================
 hydra:
   run:
-    dir: "/scr2/zhaoyang/bfn/outputs/${now:%Y.%m.%d}/${now:%H.%M.%S}_diffusion_real_image_seed${training.seed}"
+    dir: "$PROJECT_ROOT/outputs/${now:%Y.%m.%d}/${now:%H.%M.%S}_diffusion_real_image_seed${training.seed}"
   sweep:
     dir: outputs/benchmark/${now:%Y-%m-%d}
     subdir: diffusion_real_image_seed${training.seed}

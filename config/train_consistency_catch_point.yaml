@@ -37,14 +37,14 @@ policy:
   ctm_weight: 1.0
   dsm_weight: 1.0
   delta: 0.0
-  teacher_path: outputs/2026.05.02/TBD_train_edm_catch_point_catch_point/checkpoints/latest.ckpt
+  teacher_path: outputs/2026.05.03/21.20.03_train_edm_catch_point_catch_point/checkpoints/latest.ckpt
   obs_encoder_dims: [256, 256]
   diffusion_step_embed_dim: 128
   down_dims: [256, 512, 1024]
   kernel_size: 5
   n_groups: 8
   cond_predict_scale: true
-  initial_ema_decay: 0.9
+  initial_ema_decay: 0.999
 
 task:
   dataset:

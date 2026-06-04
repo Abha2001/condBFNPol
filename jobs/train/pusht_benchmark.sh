@@ -6,7 +6,7 @@
 #SBATCH --mem=64G                        # 64GB RAM
 #SBATCH --time=48:00:00                  # 48 hour limit for full benchmark
 #SBATCH --output=logs/benchmark-%j.out   # Save logs here
-#SBATCH --chdir=/dss/dsshome1/0D/ge87gob2/condBFNPol  # Set working directory
+#SBATCH --chdir=$PROJECT_ROOT  # Set working directory
 
 # PushT Benchmark: BFN vs Diffusion Policy
 #
@@ -50,7 +50,7 @@ export HYDRA_FULL_ERROR=1
 
 # ================== Disk Space Management ==================
 # Use home directory for outputs (LRZ setup)
-# Your home: /dss/dsshome1/0D/ge87gob2
+# Your home: $PROJECT_ROOT
 SCRATCH_DIR="${SCRATCH_DIR:-$HOME}"
 OUTPUT_DIR="${SCRATCH_DIR}/condBFNPol/outputs"
 mkdir -p "$OUTPUT_DIR" || { echo "ERROR: Cannot create $OUTPUT_DIR"; exit 1; }
@@ -78,7 +78,7 @@ NUM_WORKERS="${NUM_WORKERS:-8}"  # Reduced to avoid memory issues
 if [ -z "$DATA_PATH" ]; then
     if [[ "$(hostname)" == *"lrz"* ]] || [[ "$(hostname)" == *"gpu"* ]]; then
         # Cluster path
-        DATA_PATH="/dss/dsshome1/0D/ge87gob2/condBFNPol/data/pusht/pusht_cchi_v7_replay.zarr"
+        DATA_PATH="$PROJECT_ROOT/data/pusht/pusht_cchi_v7_replay.zarr"
     else
         # Local path
         DATA_PATH="data/pusht/pusht_cchi_v7_replay.zarr"

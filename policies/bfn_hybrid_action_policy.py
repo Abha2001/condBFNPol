@@ -447,24 +447,27 @@ class BFNHybridActionPolicy(BasePolicy):
         
         # Sample using hybrid BFN
         naction = self._sample_hybrid_bfn(B, T, cond, device, dtype)
-        
+
         # Extract action steps
         start = self.n_obs_steps - 1
         end = start + self.n_action_steps
         action = naction[:, start:end]
-        
-        # Unnormalize continuous actions (discrete stay as indices)
-        action_unnorm = self.normalizer['action'].unnormalize(action)
-        
-        # For discrete dims, convert to binary [-1, +1] (threshold at 0)
-        for idx in sorted(self.discrete_action_indices):
-            # Map to [-1, +1]: values > 0 -> +1, values <= 0 -> -1
-            action_unnorm[:, :, idx] = torch.where(
-                action_unnorm[:, :, idx] > 0, 
-                torch.ones_like(action_unnorm[:, :, idx]),
-                -torch.ones_like(action_unnorm[:, :, idx])
-            )
-        
+
+        # Unnormalize ONLY continuous params, NOT discrete class
+        # action format: [discrete_class, continuous_params...]
+        # discrete_class comes from argmax and should NOT be unnormalized
+        action_unnorm = action.clone()
+
+        # Only unnormalize continuous params (not discrete dimensions)
+        # Create full tensor for unnormalization, then copy back continuous only
+        full_unnorm = self.normalizer['action'].unnormalize(action)
+
+        # Get continuous indices (all indices that are NOT discrete)
+        cont_indices = [i for i in range(action.shape[-1]) if i not in self.discrete_action_indices]
+        for idx in cont_indices:
+            action_unnorm[:, :, idx] = full_unnorm[:, :, idx]
+        # Discrete indices stay as raw class values (0, 1, 2, 3, etc.)
+
         return {
             'action': action_unnorm,
             'action_pred': naction
@@ -591,80 +594,81 @@ class BFNHybridActionPolicy(BasePolicy):
         
         # Extract final predictions
         x_cont_final = out_final[:, :, :cont_dim].clamp(-1.0, 1.0)
-        
-        # Discrete: argmax of final logits, then convert to normalized value
+
+        # Discrete: argmax of final logits to get class index
         disc_values = []
         offset = cont_dim
         for j, (_, n_classes) in enumerate(disc_configs):
             logits = out_final[:, :, offset:offset + n_classes]
-            # For binary gripper: class 0 = -1.0 (closed), class 1 = +1.0 (open)
-            class_idx = logits.argmax(dim=-1)  # [B, T]
-            # Map to [-1, +1] range to match ground truth encoding
-            # class 0 -> -1, class 1 -> +1
-            disc_value = class_idx.float() * 2.0 - 1.0
-            disc_values.append(disc_value.unsqueeze(-1))
+            class_idx = logits.argmax(dim=-1).float()  # [B, T] - raw class index
+            disc_values.append(class_idx.unsqueeze(-1))
             offset += n_classes
-        
-        # Merge continuous and discrete
+
+        # Build output action: [discrete_idx, continuous_params]
+        # For Lunar Lander: [class (0-3), param_0, param_1]
         if len(disc_values) > 0:
             disc_tensor = torch.cat(disc_values, dim=-1)  # [B, T, N_disc]
             naction = self._merge_actions(x_cont_final, disc_tensor)
         else:
             naction = x_cont_final
-        
+
         return naction
     
     # ==================== Training ====================
     
     def compute_loss(self, batch: Dict[str, torch.Tensor]) -> torch.Tensor:
         """Compute hybrid BFN loss.
-        
+
         - Continuous: Weighted MSE (gamma * ||x - x_pred||^2)
         - Discrete: Cross-entropy loss
+
+        IMPORTANT: For hybrid actions like [discrete_class, param_0, param_1],
+        we do NOT normalize the discrete class dimension, only the continuous params.
         """
-        # Normalize inputs
+        # Normalize observations
         nobs = self.normalizer.normalize(batch['obs'])
-        naction = self.normalizer['action'].normalize(batch['action'])
-        
-        B = naction.shape[0]
+
+        # For hybrid actions: DON'T normalize discrete class, only continuous
+        raw_action = batch['action']
+        naction = self.normalizer['action'].normalize(raw_action)
+
+        B = raw_action.shape[0]
         T = self.horizon
-        device = naction.device
-        dtype = naction.dtype
-        
+        device = raw_action.device
+        dtype = raw_action.dtype
+
         # Encode observations
         this_nobs = dict_apply(
-            nobs, 
+            nobs,
             lambda x: x[:, :self.n_obs_steps, ...].reshape(-1, *x.shape[2:])
         )
         nobs_features = self.obs_encoder(this_nobs)
         cond = nobs_features.reshape(B, -1)
-        
-        # Split actions
-        action_cont, action_disc = self._split_actions(naction)
-        
+
+        # Split actions - extract discrete from RAW action (not normalized)
+        _, action_disc_raw = self._split_actions(raw_action)  # Raw discrete class indices
+        action_cont, _ = self._split_actions(naction)  # Normalized continuous params
+
         # Sample time uniformly
         t = torch.rand(B, device=device, dtype=dtype)
         t = t.clamp(min=1e-5, max=1.0 - 1e-5)
         t_expanded = t.view(B, 1, 1)
-        
+
         # ============ Continuous: Sample noisy mean ============
         gamma = 1.0 - (self.sigma_1 ** (2.0 * t_expanded))
         var = gamma * (1.0 - gamma)
         std = (var + 1e-8).sqrt()
         mu_cont = gamma * action_cont + std * torch.randn_like(action_cont)
-        
+
         # ============ Discrete: Sample theta ============
         beta = self.beta_1 * t_expanded.pow(2.0)
-        
+
         theta_list = []
         disc_targets = []
         for j, (dim_idx, n_classes) in enumerate(self.discrete_configs):
-            # Get discrete action as class index
-            # action_disc is normalized [-1, 1], convert to class
-            disc_val = action_disc[:, :, j]  # [B, T]
-            # For binary: 0 -> class 0, 1 -> class 1
-            # Unnormalize from [-1, 1] to [0, 1] then to class
-            disc_class = ((disc_val + 1) / 2 * (n_classes - 1)).round().long().clamp(0, n_classes - 1)
+            # Get discrete action as class index directly from RAW action
+            # No need to unnormalize - we use the raw discrete class values
+            disc_class = action_disc_raw[:, :, j].long().clamp(0, n_classes - 1)
             disc_targets.append(disc_class)
             
             # One-hot encode

@@ -21,7 +21,7 @@ dataset_obs_steps: ${n_obs_steps}
 # ================== Shared Task Params ==================
 image_shape: [3, 480, 640]
 crop_shape: [384, 512]
-dataset_path: /scr2/zhaoyang/BFN_data/pusht_real
+dataset_path: $PROJECT_ROOT/data/pusht_real
 
 # ================== Shape Meta ==================
 shape_meta:
@@ -102,14 +102,14 @@ training:
 dataloader:
   batch_size: 64
   shuffle: true
-  num_workers: 8
+  num_workers: 0
   pin_memory: true
   persistent_workers: false
 
 val_dataloader:
   batch_size: 64
   shuffle: false
-  num_workers: 8
+  num_workers: 0
   pin_memory: true
   persistent_workers: false
 
@@ -166,7 +166,7 @@ logging:
 # ================== Hydra ==================
 hydra:
   run:
-    dir: "/scr2/zhaoyang/bfn/outputs/${now:%Y.%m.%d}/${now:%H.%M.%S}_bfn_real_image_seed${training.seed}"
+    dir: "$PROJECT_ROOT/outputs/${now:%Y.%m.%d}/${now:%H.%M.%S}_bfn_real_image_seed${training.seed}"
   sweep:
     dir: outputs/benchmark/${now:%Y-%m-%d}
     subdir: bfn_real_image_seed${training.seed}

@@ -8,7 +8,7 @@ import os
 import sys
 
 # Set project path FIRST before any other imports
-sys.path.insert(0, '/dss/dsshome1/0D/ge87gob2/condBFNPol')
+sys.path.insert(0, '$PROJECT_ROOT')
 
 # Force OSMesa (software) rendering BEFORE importing mujoco_py
 os.environ['MUJOCO_GL'] = 'osmesa'
@@ -58,7 +58,7 @@ def create_env(env_name='Lift', render=False):
     import robomimic.utils.file_utils as FileUtils
     
     # Get env meta from dataset
-    dataset_path = f'/dss/dsshome1/0D/ge87gob2/condBFNPol/data/robomimic/datasets/lift/ph/image.hdf5'
+    dataset_path = f'$PROJECT_ROOT/data/robomimic/datasets/lift/ph/image.hdf5'
     env_meta = FileUtils.get_env_metadata_from_dataset(dataset_path)
     
     env = EnvUtils.create_env_from_metadata(
@@ -212,7 +212,7 @@ def main():
     print(f"Episodes per policy: {args.n_episodes}")
     
     # Find all checkpoints
-    outputs_dir = '/dss/dsshome1/0D/ge87gob2/condBFNPol/outputs'
+    outputs_dir = '$PROJECT_ROOT/outputs'
     checkpoints = {'bfn': [], 'diffusion': []}
     
     for exp_name in sorted(os.listdir(outputs_dir)):
@@ -305,7 +305,7 @@ def main():
             print(f"\n🏆 TIE")
     
     # Save results
-    output_file = '/dss/dsshome1/0D/ge87gob2/condBFNPol/thesis_figures/rollout_results.json'
+    output_file = '$PROJECT_ROOT/thesis_figures/rollout_results.json'
     with open(output_file, 'w') as f:
         json.dump(all_results, f, indent=2)
     print(f"\nResults saved to: {output_file}")

@@ -51,7 +51,7 @@ COLORS = {
 
 def create_output_dir():
     """Create output directory for figures."""
-    output_dir = Path('/dss/dsshome1/0D/ge87gob2/condBFNPol/figures/publication')
+    output_dir = Path('/project2/biyik_1165/abhajha/condBFNPol/figures/publication')
     output_dir.mkdir(parents=True, exist_ok=True)
     return output_dir
 

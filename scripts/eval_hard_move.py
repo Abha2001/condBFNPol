@@ -24,6 +24,11 @@ try:
     HAS_CONSISTENCY = True
 except ImportError:
     HAS_CONSISTENCY = False
+try:
+    from policies.edm_lowdim_policy import EDMLowdimPolicy
+    HAS_EDM = True
+except ImportError:
+    HAS_EDM = False
 
 print("Loading environment...", flush=True)
 from environments.hard_move import HardMoveEnv
@@ -65,6 +70,22 @@ def load_policy(checkpoint_path: str, policy_type: str, n_actuators: int, device
             sigma_1=0.001,
             beta_1=0.2,
             n_timesteps=10,
+        )
+    elif policy_type == "edm":
+        policy = EDMLowdimPolicy(
+            obs_dim=4,
+            action_dim=action_dim_continuous,
+            horizon=16,
+            n_obs_steps=2,
+            n_action_steps=8,
+            sigma_min=0.002,
+            sigma_max=80.0,
+            rho=7.0,
+            num_inference_steps=40,
+            solver="heun",
+            P_mean=-1.2,
+            P_std=1.2,
+            delta=-1.0,
         )
     elif policy_type == "ddim":
         policy = DiffusionLowdimPolicy(
@@ -163,8 +184,6 @@ def evaluate_policy(policy, policy_type: str, n_actuators: int, n_episodes: int 
 
     if policy_type in ["bfn", "bfn10"]:
         get_action = lambda p, o, d: get_action_bfn(p, o, num_discrete, d)
-    elif policy_type in ["consistency", "consistency3"]:
-        get_action = lambda p, o, d: get_action_continuous(p, o, num_discrete, d)
     else:
         get_action = lambda p, o, d: get_action_continuous(p, o, num_discrete, d)
 
@@ -224,6 +243,8 @@ def main():
     parser.add_argument("--bfn10_ckpt", type=str, default=None)
     parser.add_argument("--ddpm_ckpt", type=str, default=None)
     parser.add_argument("--ddim_ckpt", type=str, default=None)
+    parser.add_argument("--edm_ckpt", type=str, default=None,
+                        help="Evaluate EDM directly (40-step)")
     parser.add_argument("--consistency_ckpt", type=str, default=None)
     parser.add_argument("--consistency3_ckpt", type=str, default=None,
                         help="Same Consistency checkpoint, but uses 3-step inference")
@@ -237,6 +258,7 @@ def main():
         ("bfn10", args.bfn10_ckpt, "BFN-10 (10 steps)"),
         ("ddpm", args.ddpm_ckpt, "DDPM (100 steps)"),
         ("ddim", args.ddim_ckpt, "DDIM (10 steps, uses DDPM weights)"),
+        ("edm", args.edm_ckpt, "EDM (40 steps, teacher)"),
         ("consistency", args.consistency_ckpt, "Consistency (1 step)"),
         ("consistency3", args.consistency3_ckpt, "Consistency-3 (3 steps)"),
     ]
@@ -273,8 +295,9 @@ def main():
             "ddpm": "DDPM (100)",
             "ddim": "DDIM (10)",
             "consistency": "Consistency (1)",
+            "consistency3": "Consistency-3 (3)",
         }
-        for ptype in ["bfn", "bfn10", "ddpm", "ddim", "consistency"]:
+        for ptype in ["bfn", "bfn10", "ddpm", "ddim", "consistency", "consistency3"]:
             if ptype in results:
                 r = results[ptype]
                 print(f"{labels_map[ptype]:<20} {r['success_rate']:<12.1f} "

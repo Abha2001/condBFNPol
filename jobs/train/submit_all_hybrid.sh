@@ -9,7 +9,7 @@
 #   bash jobs/train/submit_all_hybrid.sh --dry-run
 # ==============================================================================
 
-PROJECT_DIR="/dss/dsshome1/0D/ge87gob2/condBFNPol"
+PROJECT_DIR="$PROJECT_ROOT"
 JOB_SCRIPT="jobs/train/hybrid_discrete.sh"
 
 TASKS=("lift")

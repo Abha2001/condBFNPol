@@ -3,7 +3,7 @@
 
 import os
 import sys
-sys.path.insert(0, '/dss/dsshome1/0D/ge87gob2/condBFNPol')
+sys.path.insert(0, '$PROJECT_ROOT')
 os.environ['MUJOCO_GL'] = 'osmesa'
 
 import json
@@ -85,8 +85,8 @@ def main():
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     print(f"Device: {device}")
     
-    dataset_path = '/dss/dsshome1/0D/ge87gob2/condBFNPol/data/robomimic/datasets/lift/ph/image.hdf5'
-    outputs_dir = Path('/dss/dsshome1/0D/ge87gob2/condBFNPol/outputs')
+    dataset_path = '$PROJECT_ROOT/data/robomimic/datasets/lift/ph/image.hdf5'
+    outputs_dir = Path('$PROJECT_ROOT/outputs')
     
     results = {'bfn': {}, 'diffusion': {}}
     
@@ -151,7 +151,7 @@ def main():
             print(f"  Mean MSE: {np.mean(mses):.6f} ± {np.std(mses):.6f}")
     
     # Save results
-    output_file = '/dss/dsshome1/0D/ge87gob2/condBFNPol/thesis_figures/all_seeds_evaluation.json'
+    output_file = '$PROJECT_ROOT/thesis_figures/all_seeds_evaluation.json'
     with open(output_file, 'w') as f:
         json.dump(results, f, indent=2)
     print(f"\nResults saved to: {output_file}")

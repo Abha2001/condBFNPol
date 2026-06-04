@@ -20,3 +20,5 @@ from networks.base import *
 from networks.resnet import *
 from networks.unet import *
 from networks.transformer_for_diffusion import *
+from networks.edm_scheduler import *
+from networks.consistency_unet import *

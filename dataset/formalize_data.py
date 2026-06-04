@@ -268,7 +268,7 @@ def parse_default_output(src_root: Path) -> Path:
         except Exception:
             pass
     # default to sibling pusht_real folder
-    return Path("/scr2/zhaoyang/pusht_real_raw") / f"real_pusht_{date_tag}"
+    return Path("$PROJECT_ROOT/data/pusht_real_raw") / f"real_pusht_{date_tag}"
 
 
 def main() -> None:
@@ -276,7 +276,7 @@ def main() -> None:
     parser.add_argument(
         "--src",
         type=Path,
-        default=Path("/scr2/zhaoyang/BFN_data/pusht_real_raw"),
+        default=Path("$PROJECT_ROOT/data/pusht_real_raw"),
         help="Source BFN pusht_real directory",
     )
     parser.add_argument(
@@ -518,4 +518,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-    # python /scr2/zhaoyang/formalize_data.py --src /scr2/zhaoyang/BFN_data/pusht_real_raw --dst /scr2/zhaoyang/BFN_data/pusht_real_10hz --overwrite --target-hz 10
+    # python $PROJECT_ROOT/data/formalize_data.py --src $PROJECT_ROOT/data/pusht_real_raw --dst $PROJECT_ROOT/data/pusht_real_10hz --overwrite --target-hz 10

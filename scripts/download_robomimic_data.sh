@@ -10,7 +10,7 @@
 
 set -e
 
-PROJECT_DIR="/dss/dsshome1/0D/ge87gob2/condBFNPol"
+PROJECT_DIR="$PROJECT_ROOT"
 DATA_DIR="${PROJECT_DIR}/data"
 
 URL="https://diffusion-policy.cs.columbia.edu/data/training/robomimic_image.zip"
@@ -23,7 +23,7 @@ echo ""
 
 # Check current disk usage
 echo "=== Current Disk Status ==="
-df -h /dss/dsshome1 | tail -1
+df -h $PROJECT_ROOT | tail -1
 echo ""
 
 # Create data directory

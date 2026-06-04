@@ -31,7 +31,7 @@
 set -e
 
 # Configuration
-PROJECT_DIR="/dss/dsshome1/0D/ge87gob2/condBFNPol"
+PROJECT_DIR="$PROJECT_ROOT"
 TASK="${TASK:-lift}"           # lift, can, or square
 METHOD="${METHOD:-bfn_hybrid}" # bfn_hybrid or diffusion
 SEED="${SEED:-42}"
@@ -52,7 +52,7 @@ cd $PROJECT_DIR
 
 # Activate conda environment for SLURM (compatible with older conda 4.3.x)
 # Add anaconda to PATH first
-export PATH="/dss/dsshome1/0D/ge87gob2/anaconda3/bin:$PATH"
+export PATH="$HOME/.conda/envs/bfn/bin:$PATH"
 
 # Use source activate for older conda
 source activate robodiff || {
@@ -69,7 +69,7 @@ python --version
 # Check disk usage
 echo "=== Disk Usage Check ==="
 du -sh $PROJECT_DIR 2>/dev/null || echo "Could not check disk usage"
-df -h /dss/dsshome1 | tail -1
+df -h $PROJECT_ROOT | tail -1
 echo ""
 
 # Check GPU

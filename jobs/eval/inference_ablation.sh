@@ -20,7 +20,7 @@
 
 set -e
 
-PROJECT_DIR="/dss/dsshome1/0D/ge87gob2/condBFNPol"
+PROJECT_DIR="$PROJECT_ROOT"
 cd $PROJECT_DIR
 
 echo "========================================"
@@ -29,7 +29,7 @@ echo "Job ID: $SLURM_JOB_ID"
 echo "========================================"
 
 # Activate environment
-export PATH="/dss/dsshome1/0D/ge87gob2/anaconda3/bin:$PATH"
+export PATH="$HOME/.conda/envs/bfn/bin:$PATH"
 source activate robodiff
 
 # GPU info

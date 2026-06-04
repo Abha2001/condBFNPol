@@ -19,14 +19,15 @@ from DLPA import Trainer
 import utils as u
 
 
-def make_dlpa_args(action_n_dim: int, checkpoint_path: str = None):
+def make_dlpa_args(action_n_dim: int, checkpoint_path: str = None, seed: int = 0):
     """Create args namespace matching DLPA's expected format."""
     n_dim = action_n_dim  # Capture in local var for class closure
+    seed_val = seed
 
     class Args:
         # Environment
         env = "simple_move_4_direction_v1-v0"
-        seed = 0
+        seed = seed_val
         action_n_dim = n_dim
 
         # Training (not used for inference but required)
@@ -115,11 +116,12 @@ def collect_demonstrations(
     output_path: str = None,
     verbose: bool = True,
     n_visualizations: int = 10,
+    seed: int = 0,
 ):
     """Collect demonstrations from trained DLPA model using MPPI planning."""
 
     # Set up args
-    args = make_dlpa_args(action_n_dim=n_actuators)
+    args = make_dlpa_args(action_n_dim=n_actuators, seed=seed)
 
     # Create trainer (this loads env and creates world model)
     print(f"Creating DLPA trainer for n={n_actuators}...")
@@ -275,6 +277,7 @@ def main():
         n_episodes=args.n_episodes,
         output_path=args.output,
         n_visualizations=args.n_visualizations,
+        seed=args.seed,
     )
 
 

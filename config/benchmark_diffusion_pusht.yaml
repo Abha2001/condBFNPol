@@ -10,8 +10,8 @@
 defaults:
   - _self_
 
-# Workspace target
-_target_: workspaces.train_diffusion_unet_hybrid_workspace.TrainDiffusionUnetHybridWorkspace
+# Workspace target - uses diffusion policy workspace (no robomimic dependency)
+_target_: diffusion_policy.workspace.train_diffusion_unet_image_workspace.TrainDiffusionUnetImageWorkspace
 
 # Experiment info
 name: benchmark_diffusion_pusht
@@ -27,33 +27,21 @@ shape_meta:
   action:
     shape: [2]
   obs:
-    agent_pos:
-      shape: [2]
-      type: low_dim
     image:
       shape: [3, 96, 96]
       type: rgb
 
 # ================== Policy ==================
 policy:
-  _target_: diffusion_policy.policy.diffusion_unet_hybrid_image_policy.DiffusionUnetHybridImagePolicy
+  _target_: diffusion_policy.policy.diffusion_unet_image_policy.DiffusionUnetImagePolicy
   shape_meta: ${shape_meta}
   horizon: ${horizon}
   n_obs_steps: ${n_obs_steps}
   n_action_steps: ${n_action_steps}
   num_inference_steps: 100
   obs_as_global_cond: true
-  # Vision encoder config (SAME AS BFN)
-  crop_shape: [84, 84]
-  obs_encoder_group_norm: true
-  eval_fixed_crop: true
-  # U-Net config (SAME AS BFN)
-  diffusion_step_embed_dim: 128
-  down_dims: [512, 1024, 2048]
-  kernel_size: 5
-  n_groups: 8
-  cond_predict_scale: true
-  # Noise scheduler (Diffusion-specific)
+
+  # DDPM Scheduler - stochastic sampling
   noise_scheduler:
     _target_: diffusers.schedulers.scheduling_ddpm.DDPMScheduler
     num_train_timesteps: 100
@@ -63,6 +51,28 @@ policy:
     variance_type: fixed_small
     clip_sample: true
     prediction_type: epsilon
+
+  # Vision encoder - using MultiImageObsEncoder (no robomimic dependency)
+  obs_encoder:
+    _target_: diffusion_policy.model.vision.multi_image_obs_encoder.MultiImageObsEncoder
+    shape_meta: ${shape_meta}
+    rgb_model:
+      _target_: diffusion_policy.model.vision.model_getter.get_resnet
+      name: resnet18
+      weights: null  # Train from scratch for fair comparison
+    resize_shape: null
+    crop_shape: [84, 84]
+    random_crop: true
+    use_group_norm: true
+    share_rgb_model: false
+    imagenet_norm: false
+
+  # U-Net config (SAME AS BFN)
+  diffusion_step_embed_dim: 128
+  down_dims: [512, 1024, 2048]
+  kernel_size: 5
+  n_groups: 8
+  cond_predict_scale: true
 
 # ================== EMA (SAME AS BFN) ==================
 ema:
@@ -99,6 +109,7 @@ training:
   max_val_steps: null
   tqdm_interval_sec: 1.0
   use_ema: true
+  freeze_encoder: false
 
 # ================== Dataloader (SAME AS BFN) ==================
 dataloader:
@@ -123,8 +134,8 @@ task:
   
   dataset:
     _target_: diffusion_policy.dataset.pusht_image_dataset.PushTImageDataset
-    # Use absolute path - override with task.dataset.zarr_path=/path/to/data on cluster
-    zarr_path: /scr/abhajha/condBFNPol/pusht/pusht_cchi_v7_replay.zarr
+    # Use absolute path
+    zarr_path: $PROJECT_ROOT/pusht_raw/pusht_cchi_v7_replay.zarr
     horizon: ${horizon}
     pad_before: 1
     pad_after: 7
@@ -145,7 +156,7 @@ task:
     n_action_steps: ${n_action_steps}
     fps: 10
     past_action: false
-    n_envs: null
+    n_envs: 1  # Disable parallel envs to avoid shared_memory issues
     legacy_test: true
 
 # ================== Checkpoint ==================
@@ -175,7 +186,7 @@ logging:
 # ================== Hydra ==================
 hydra:
   run:
-    dir: "/scr/abhajha/condBFNPol/outputs/${now:%Y.%m.%d}/${now:%H.%M.%S}_diffusion_seed${SEED}"
+    dir: "$PROJECT_ROOT/outputs/${now:%Y.%m.%d}/${now:%H.%M.%S}_diffusion_seed${training.seed}"
   sweep:
     dir: outputs/benchmark/${now:%Y-%m-%d}
     subdir: diffusion_seed${training.seed}

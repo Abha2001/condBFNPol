@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
 """
-cd /home/liralab-widowx/condBFNPol
+cd $PROJECT_ROOT
 python eval_widowx.py \
-  --ckpt_path /data/BFN_data/checkpoints/diffusion_real_pusht.ckpt \
+  --ckpt_path $PROJECT_ROOT/checkpoints/diffusion_real_pusht.ckpt \
   --ip localhost --port 5556 \
   --camera_topics /D435/color/image_raw /blue/image_raw \
   --device cuda --im_size 480 \

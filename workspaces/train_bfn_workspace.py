@@ -241,11 +241,19 @@ class TrainBFNWorkspace(BaseWorkspace):
                         
                         # Compute loss
                         raw_loss = self.model.compute_loss(batch)
+
+                        # Skip step if loss is NaN to prevent model corruption
+                        if torch.isnan(raw_loss) or torch.isinf(raw_loss):
+                            self.optimizer.zero_grad()
+                            continue
+
                         loss = raw_loss / cfg.training.gradient_accumulate_every
                         loss.backward()
-                        
-                        # Step optimizer
+
+                        # Step optimizer with gradient clipping
                         if self.global_step % cfg.training.gradient_accumulate_every == 0:
+                            # Gradient clipping to prevent explosion
+                            torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
                             self.optimizer.step()
                             self.optimizer.zero_grad()
                             lr_scheduler.step()
@@ -316,7 +324,7 @@ class TrainBFNWorkspace(BaseWorkspace):
                             val_loss = np.mean(val_losses)
                             step_log['val_loss'] = val_loss
                 
-                # BFN sampling on training batch
+                # BFN sampling on training batch with detailed logging
                 if (self.epoch % cfg.training.sample_every) == 0:
                     with torch.no_grad():
                         batch = dict_apply(
@@ -325,10 +333,10 @@ class TrainBFNWorkspace(BaseWorkspace):
                         )
                         obs = batch['obs']
                         gt_action = batch['action']
-                        
+
                         # Get predicted actions
                         pred_action = policy(obs)
-                        
+
                         # Handle different action shapes
                         # Policy returns [B, n_action_steps, Da], gt_action is [B, horizon, Da]
                         # We need to compare only the overlapping timesteps
@@ -344,10 +352,61 @@ class TrainBFNWorkspace(BaseWorkspace):
                             pred_action = pred_action.reshape(pred_action.shape[0], -1)
                         elif pred_action.ndim == 2 and gt_action.ndim == 3:
                             gt_action = gt_action.reshape(gt_action.shape[0], -1)
-                        
+
+                        # Overall MSE
                         mse = torch.nn.functional.mse_loss(pred_action, gt_action)
                         step_log['train_action_mse_error'] = mse.item()
-                        
+
+                        # ========= Detailed per-dimension logging =========
+                        action_dim = pred_action.shape[-1]
+
+                        # Check if policy has discrete action config (for hybrid BFN)
+                        discrete_indices = getattr(policy, 'discrete_action_indices', set())
+
+                        if len(discrete_indices) > 0:
+                            # Log discrete action accuracy
+                            for idx in discrete_indices:
+                                pred_disc = pred_action[..., idx].round().long()
+                                gt_disc = gt_action[..., idx].round().long()
+                                accuracy = (pred_disc == gt_disc).float().mean()
+                                step_log[f'discrete_accuracy_dim{idx}'] = accuracy.item()
+
+                            # Log continuous MSE separately
+                            cont_indices = [i for i in range(action_dim) if i not in discrete_indices]
+                            if cont_indices:
+                                pred_cont = pred_action[..., cont_indices]
+                                gt_cont = gt_action[..., cont_indices]
+                                cont_mse = torch.nn.functional.mse_loss(pred_cont, gt_cont)
+                                step_log['continuous_mse'] = cont_mse.item()
+
+                        # Per-dimension MSE
+                        for dim_idx in range(min(action_dim, 6)):  # Log up to 6 dims
+                            dim_mse = torch.nn.functional.mse_loss(
+                                pred_action[..., dim_idx], gt_action[..., dim_idx]
+                            )
+                            step_log[f'action_mse_dim{dim_idx}'] = dim_mse.item()
+
+                        # Log sample predictions for visualization (first 4 samples)
+                        if self.epoch % (cfg.training.sample_every * 10) == 0:
+                            # Create prediction comparison table for wandb
+                            n_samples = min(4, pred_action.shape[0])
+                            pred_np = pred_action[:n_samples, 0].cpu().numpy()  # First timestep
+                            gt_np = gt_action[:n_samples, 0].cpu().numpy()
+
+                            # Log as wandb table
+                            columns = [f"pred_d{i}" for i in range(action_dim)] + \
+                                      [f"gt_d{i}" for i in range(action_dim)]
+                            data = []
+                            for i in range(n_samples):
+                                row = list(pred_np[i]) + list(gt_np[i])
+                                data.append(row)
+
+                            try:
+                                table = wandb.Table(columns=columns, data=data)
+                                wandb_run.log({"prediction_samples": table}, step=self.global_step)
+                            except Exception:
+                                pass  # Skip if wandb table fails
+
                         del batch, obs, gt_action, pred_action, mse
                 
                 # ========= Checkpointing =========

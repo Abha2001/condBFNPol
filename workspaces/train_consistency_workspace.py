@@ -230,6 +230,17 @@ class TrainConsistencyWorkspace(BaseWorkspace):
 
                         # Step optimizer with gradient clipping
                         if self.global_step % cfg.training.gradient_accumulate_every == 0:
+                            # Check for NaN/Inf in gradients before stepping (consistency
+                            # backward can produce NaN grads even when forward loss is finite)
+                            grad_has_nan = False
+                            for p in self.model.parameters():
+                                if p.grad is not None and (torch.isnan(p.grad).any() or torch.isinf(p.grad).any()):
+                                    grad_has_nan = True
+                                    break
+                            if grad_has_nan:
+                                self.optimizer.zero_grad()
+                                continue
+
                             # Gradient clipping to prevent explosion
                             torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
                             self.optimizer.step()

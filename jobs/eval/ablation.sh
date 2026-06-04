@@ -20,7 +20,7 @@
 
 set -e
 
-PROJECT_DIR="/dss/dsshome1/0D/ge87gob2/condBFNPol"
+PROJECT_DIR="$PROJECT_ROOT"
 cd $PROJECT_DIR
 
 echo "========================================"
