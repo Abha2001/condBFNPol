@@ -18,7 +18,7 @@ cd "$SLURM_SUBMIT_DIR"
 mkdir -p videos/seed_sweep
 
 SEED=$SLURM_ARRAY_TASK_ID
-ARCH=$ARCHIVE_DIR
+ARCH=/scratch1/abhajha/condBFNPol_archive
 BFN=$ARCH/2026.04.29/14.03.32_train_bfn_hard_move_n4_hard_move_n4/checkpoints/latest.ckpt
 DDPM=$ARCH/2026.04.29/14.03.32_train_ddpm_hard_move_n4_hard_move_n4/checkpoints/latest.ckpt
 CONS=$ARCH/2026.04.29/15.34.22_train_consistency_hard_move_n4_hard_move_n4/checkpoints/latest.ckpt
