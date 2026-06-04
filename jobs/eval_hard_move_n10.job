@@ -8,13 +8,13 @@
 #SBATCH --mem=16G
 #SBATCH --time=2:00:00
 #SBATCH --job-name=eval_hm_n10
-#SBATCH --output=$PROJECT_ROOT/jobs/logs/%x_%j.out
-#SBATCH --error=$PROJECT_ROOT/jobs/logs/%x_%j.err
+#SBATCH --output=jobs/logs/%x_%j.out
+#SBATCH --error=jobs/logs/%x_%j.err
 
 source /apps/conda/miniforge3/24.11.3/etc/profile.d/conda.sh
 conda activate bfn
 
-cd $PROJECT_ROOT
+cd "$SLURM_SUBMIT_DIR"
 
 BFN_CKPT="outputs/2026.05.12/08.09.29_train_bfn_hard_move_n10_hard_move_n10/checkpoints/latest.ckpt"
 DDPM_CKPT="outputs/2026.05.12/08.09.29_train_ddpm_hard_move_n10_hard_move_n10/checkpoints/latest.ckpt"

@@ -8,12 +8,12 @@
 #SBATCH --mem=24G
 #SBATCH --time=0:30:00
 #SBATCH --job-name=time_inf
-#SBATCH --output=$PROJECT_ROOT/jobs/logs/%x_%j.out
-#SBATCH --error=$PROJECT_ROOT/jobs/logs/%x_%j.err
+#SBATCH --output=jobs/logs/%x_%j.out
+#SBATCH --error=jobs/logs/%x_%j.err
 
 source /apps/conda/miniforge3/24.11.3/etc/profile.d/conda.sh
 conda activate bfn
-cd $PROJECT_ROOT
+cd "$SLURM_SUBMIT_DIR"
 
 python scripts/time_inference_pamdp.py --out results/inference_timing_pamdp.json
 echo "Done at $(date)"

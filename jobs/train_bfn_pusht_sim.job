@@ -8,8 +8,8 @@
 #SBATCH --mem=48G
 #SBATCH --time=24:00:00
 #SBATCH --job-name=bfn_pusht_sim
-#SBATCH --output=$PROJECT_ROOT/jobs/logs/%x_%j.out
-#SBATCH --error=$PROJECT_ROOT/jobs/logs/%x_%j.err
+#SBATCH --output=jobs/logs/%x_%j.out
+#SBATCH --error=jobs/logs/%x_%j.err
 
 # Retrain BFN on the standard simulated PushT benchmark (206 demos, image-based).
 # The original checkpoint was deleted; this restores it so we can evaluate BFN-10
@@ -17,7 +17,7 @@
 
 source /apps/conda/miniforge3/24.11.3/etc/profile.d/conda.sh
 conda activate bfn
-cd $PROJECT_ROOT
+cd "$SLURM_SUBMIT_DIR"
 
 export HYDRA_FULL_ERROR=1
 DATA=data/pusht_sim/pusht/pusht_cchi_v7_replay.zarr

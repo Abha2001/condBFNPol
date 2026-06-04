@@ -8,15 +8,15 @@
 #SBATCH --mem=32G
 #SBATCH --time=12:00:00
 #SBATCH --job-name=train_consistency_n4
-#SBATCH --output=$PROJECT_ROOT/jobs/logs/%x_%j.out
-#SBATCH --error=$PROJECT_ROOT/jobs/logs/%x_%j.err
+#SBATCH --output=jobs/logs/%x_%j.out
+#SBATCH --error=jobs/logs/%x_%j.err
 
 # Train Consistency policy on Hard Move n=4 (uses trained EDM as teacher)
 
 source /apps/conda/miniforge3/24.11.3/etc/profile.d/conda.sh
 conda activate bfn
 
-cd $PROJECT_ROOT
+cd "$SLURM_SUBMIT_DIR"
 
 echo "=========================================="
 echo "SLURM_JOB_ID = $SLURM_JOB_ID"

@@ -8,8 +8,8 @@
 #SBATCH --mem=32G
 #SBATCH --time=24:00:00
 #SBATCH --job-name=dlpa_pg
-#SBATCH --output=$PROJECT_ROOT/jobs/logs/%x_%j.out
-#SBATCH --error=$PROJECT_ROOT/jobs/logs/%x_%j.err
+#SBATCH --output=jobs/logs/%x_%j.out
+#SBATCH --error=jobs/logs/%x_%j.err
 #SBATCH --array=0-1
 
 # Train DLPA expert on Platform (0) and Goal (1)

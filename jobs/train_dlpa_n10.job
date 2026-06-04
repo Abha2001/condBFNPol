@@ -8,8 +8,8 @@
 #SBATCH --mem=32G
 #SBATCH --time=24:00:00
 #SBATCH --job-name=dlpa_n10
-#SBATCH --output=$PROJECT_ROOT/jobs/logs/%x_%j.out
-#SBATCH --error=$PROJECT_ROOT/jobs/logs/%x_%j.err
+#SBATCH --output=jobs/logs/%x_%j.out
+#SBATCH --error=jobs/logs/%x_%j.err
 
 # Train DLPA expert on Hard Move n=10 (1024 discrete actions)
 

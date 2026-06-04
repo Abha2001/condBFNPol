@@ -8,13 +8,13 @@
 #SBATCH --mem=24G
 #SBATCH --time=0:30:00
 #SBATCH --job-name=rend_seed
-#SBATCH --output=$PROJECT_ROOT/jobs/logs/%x_%a_%j.out
-#SBATCH --error=$PROJECT_ROOT/jobs/logs/%x_%a_%j.err
+#SBATCH --output=jobs/logs/%x_%a_%j.out
+#SBATCH --error=jobs/logs/%x_%a_%j.err
 #SBATCH --array=0-19
 
 source /apps/conda/miniforge3/24.11.3/etc/profile.d/conda.sh
 conda activate bfn
-cd $PROJECT_ROOT
+cd "$SLURM_SUBMIT_DIR"
 mkdir -p videos/seed_sweep
 
 # Tasks 0-9 = goal seeds 0-9; tasks 10-19 = hard_goal seeds 0-9

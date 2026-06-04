@@ -8,8 +8,8 @@
 #SBATCH --mem=32G
 #SBATCH --time=24:00:00
 #SBATCH --job-name=dlpa_n8_resume
-#SBATCH --output=$PROJECT_ROOT/jobs/logs/%x_%j.out
-#SBATCH --error=$PROJECT_ROOT/jobs/logs/%x_%j.err
+#SBATCH --output=jobs/logs/%x_%j.out
+#SBATCH --error=jobs/logs/%x_%j.err
 
 # Resume DLPA training for n=8 from existing checkpoint to get better expert
 

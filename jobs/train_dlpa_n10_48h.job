@@ -8,8 +8,8 @@
 #SBATCH --mem=32G
 #SBATCH --time=48:00:00
 #SBATCH --job-name=dlpa_n10_48h
-#SBATCH --output=$PROJECT_ROOT/jobs/logs/%x_%j.out
-#SBATCH --error=$PROJECT_ROOT/jobs/logs/%x_%j.err
+#SBATCH --output=jobs/logs/%x_%j.out
+#SBATCH --error=jobs/logs/%x_%j.err
 
 # Train DLPA n=10 for 48h, resuming from previous best checkpoint (-18.36)
 # Goal: match paper's ~50k timesteps and reach positive rewards

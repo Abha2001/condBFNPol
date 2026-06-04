@@ -8,15 +8,15 @@
 #SBATCH --mem=16G
 #SBATCH --time=2:00:00
 #SBATCH --job-name=eval_extended
-#SBATCH --output=$PROJECT_ROOT/jobs/logs/%x_%j.out
-#SBATCH --error=$PROJECT_ROOT/jobs/logs/%x_%j.err
+#SBATCH --output=jobs/logs/%x_%j.out
+#SBATCH --error=jobs/logs/%x_%j.err
 
 # Evaluate BFN-20, BFN-10, DDPM, and DDIM on Extended Lunar Lander (16 actions)
 
 source /apps/conda/miniforge3/24.11.3/etc/profile.d/conda.sh
 conda activate bfn
 
-cd $PROJECT_ROOT
+cd "$SLURM_SUBMIT_DIR"
 
 echo "=========================================="
 echo "SLURM_JOB_ID = $SLURM_JOB_ID"

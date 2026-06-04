@@ -8,8 +8,8 @@
 #SBATCH --mem=40G
 #SBATCH --time=4:00:00
 #SBATCH --job-name=benchmark_partial
-#SBATCH --output=$PROJECT_ROOT/jobs/logs/%x_%j.out
-#SBATCH --error=$PROJECT_ROOT/jobs/logs/%x_%j.err
+#SBATCH --output=jobs/logs/%x_%j.out
+#SBATCH --error=jobs/logs/%x_%j.err
 
 # Benchmark completed policies (BFN, EDM, Consistency) on PushT
 # DDPM and DDIM will be added once training completes
@@ -22,7 +22,7 @@ CONSISTENCY_CKPT="$PROJECT_ROOT/outputs/2026.02.28/03.03.17_consistency_seed42/c
 source /apps/conda/miniforge3/24.11.3/etc/profile.d/conda.sh
 conda activate bfn
 
-cd $PROJECT_ROOT
+cd "$SLURM_SUBMIT_DIR"
 
 # Run benchmark (using -u for unbuffered output)
 $HOME/.conda/envs/bfn/bin/python -u scripts/benchmark_policies.py \

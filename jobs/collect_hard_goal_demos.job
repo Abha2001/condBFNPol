@@ -8,15 +8,15 @@
 #SBATCH --mem=16G
 #SBATCH --time=4:00:00
 #SBATCH --job-name=collect_hg
-#SBATCH --output=$PROJECT_ROOT/jobs/logs/%x_%j.out
-#SBATCH --error=$PROJECT_ROOT/jobs/logs/%x_%j.err
+#SBATCH --output=jobs/logs/%x_%j.out
+#SBATCH --error=jobs/logs/%x_%j.err
 
 # Collect Hard Goal demos using DLPA best checkpoint (peak reward +27.77)
 
 source /apps/conda/miniforge3/24.11.3/etc/profile.d/conda.sh
 conda activate bfn
 
-cd $PROJECT_ROOT
+cd "$SLURM_SUBMIT_DIR"
 
 CHECKPOINT="_external/DLPA/result/DLPA/hard_goal/hard_goal_seed0/world_model_best_0.pth"
 

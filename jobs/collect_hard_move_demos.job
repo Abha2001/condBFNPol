@@ -8,8 +8,8 @@
 #SBATCH --mem=16G
 #SBATCH --time=4:00:00
 #SBATCH --job-name=collect_demos
-#SBATCH --output=$PROJECT_ROOT/jobs/logs/%x_%j.out
-#SBATCH --error=$PROJECT_ROOT/jobs/logs/%x_%j.err
+#SBATCH --output=jobs/logs/%x_%j.out
+#SBATCH --error=jobs/logs/%x_%j.err
 #SBATCH --array=0-2
 
 # Collect demonstrations from trained DLPA experts
@@ -18,7 +18,7 @@
 source /apps/conda/miniforge3/24.11.3/etc/profile.d/conda.sh
 conda activate bfn
 
-cd $PROJECT_ROOT
+cd "$SLURM_SUBMIT_DIR"
 
 # Map array index to action dimensions
 case $SLURM_ARRAY_TASK_ID in

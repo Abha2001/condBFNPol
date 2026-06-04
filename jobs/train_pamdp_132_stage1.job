@@ -8,8 +8,8 @@
 #SBATCH --mem=32G
 #SBATCH --time=2:00:00
 #SBATCH --job-name=pamdp132_s1
-#SBATCH --output=$PROJECT_ROOT/jobs/logs/%x_%a_%j.out
-#SBATCH --error=$PROJECT_ROOT/jobs/logs/%x_%a_%j.err
+#SBATCH --output=jobs/logs/%x_%a_%j.out
+#SBATCH --error=jobs/logs/%x_%a_%j.err
 #SBATCH --array=0-23
 
 # 24 trainings: 8 envs * 3 baselines (BFN, DDPM, EDM)
@@ -17,7 +17,7 @@
 
 source /apps/conda/miniforge3/24.11.3/etc/profile.d/conda.sh
 conda activate bfn
-cd $PROJECT_ROOT
+cd "$SLURM_SUBMIT_DIR"
 
 # Index encoding: array_id = env_idx * 3 + policy_idx
 ENVS=(hard_move_n4 hard_move_n6 hard_move_n8 hard_move_n10 hard_goal goal platform catch_point)

@@ -8,15 +8,15 @@
 #SBATCH --mem=32G
 #SBATCH --time=8:00:00
 #SBATCH --job-name=xarm200_s2_cons
-#SBATCH --output=$PROJECT_ROOT/jobs/logs/%x_%j.out
-#SBATCH --error=$PROJECT_ROOT/jobs/logs/%x_%j.err
+#SBATCH --output=jobs/logs/%x_%j.out
+#SBATCH --error=jobs/logs/%x_%j.err
 
 # Stage 2: Consistency distillation from the EDM teacher trained in stage 1.
 
 source /apps/conda/miniforge3/24.11.3/etc/profile.d/conda.sh
 conda activate bfn
 
-cd $PROJECT_ROOT
+cd "$SLURM_SUBMIT_DIR"
 
 # Find newest EDM output dir on the 200-demo dataset.
 EDM_RUN=$(ls -td outputs/*/*_train_edm_pusht_xarm_200 2>/dev/null | head -1)

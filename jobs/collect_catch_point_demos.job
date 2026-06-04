@@ -8,13 +8,13 @@
 #SBATCH --mem=16G
 #SBATCH --time=4:00:00
 #SBATCH --job-name=collect_cp
-#SBATCH --output=$PROJECT_ROOT/jobs/logs/%x_%j.out
-#SBATCH --error=$PROJECT_ROOT/jobs/logs/%x_%j.err
+#SBATCH --output=jobs/logs/%x_%j.out
+#SBATCH --error=jobs/logs/%x_%j.err
 
 source /apps/conda/miniforge3/24.11.3/etc/profile.d/conda.sh
 conda activate bfn
 
-cd $PROJECT_ROOT
+cd "$SLURM_SUBMIT_DIR"
 
 CHECKPOINT="_external/DLPA/result/DLPA/simple_catch/catch_point_seed0/world_model_best_0.pth"
 
